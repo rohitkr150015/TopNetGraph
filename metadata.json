@@ -1,10 +1,7 @@
 {
-  "uuid": "topnetgraph@rohitkr150015",
+  "uuid": "topnetgraph@rohitkr150015.github.io",
   "name": "TopNetGraph",
-  "description": "Real-time network traffic graph in top panel",
-  "shell-version": ["46"],
-  "version": 0.1,
-   "donations": {
-    "github": "rohitkr150015"
-  }
+  "description": "Displays a real-time network traffic graph in the top panel.\n\nUseful for monitoring upload and download speeds visually.",
+  "shell-version": ["45" , "46"],
+  "url": "https://github.com/rohitkr150015/TopNetGraph"
 }

@@ -2,7 +2,11 @@
 <schemalist gettext-domain="gnome-shell-extensions">
   <schema id="org.gnome.shell.extensions.topnetgraph" path="/org/gnome/shell/extensions/topnetgraph/">
     <key name="graph-type" type="s">
-      <default>'line'</default>
+      <choices>
+        <choice value='line'/>
+        <choice value='filled'/>
+      </choices>
+      <default>'filled'</default>
       <summary>Graph display type</summary>
       <description>Whether to show line graph or filled areas</description>
     </key>
@@ -12,6 +16,7 @@
       <description>Specific interface name or 'auto' for all active interfaces</description>
     </key>
     <key name="update-interval" type="i">
+      <range min="100" max="2000"/>
       <default>500</default>
       <summary>Update interval in milliseconds</summary>
       <description>How often to refresh network statistics</description>
