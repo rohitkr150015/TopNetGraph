@@ -1,0 +1,10 @@
+{
+  "uuid": "topnetgraph@rohitkr150015",
+  "name": "TopNetGraph",
+  "description": "Real-time network traffic graph in top panel",
+  "shell-version": ["46"],
+  "version": 0.1,
+   "donations": {
+    "github": "rohitkr150015"
+  }
+}
