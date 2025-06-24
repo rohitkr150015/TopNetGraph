@@ -6,7 +6,8 @@ import {ExtensionPreferences, gettext as _} from 'resource:///org/gnome/Shell/Ex
 
 export default class TopNetGraphPreferences extends ExtensionPreferences {
     fillPreferencesWindow(window) {
-        const settings = this.getSettings();
+       const settings = this.getSettings('org.gnome.shell.extensions.topnetgraph');
+
         
         const page = new Adw.PreferencesPage({
             title: _('TopNetGraph'),
@@ -46,7 +47,6 @@ export default class TopNetGraphPreferences extends ExtensionPreferences {
         // Network Interface
         const interfaceRow = new Adw.EntryRow({
             title: _('Network Interface'),
-            subtitle: _('Specific interface name or "auto" for all active interfaces'),
             text: settings.get_string('network-interface'),
         });
         
