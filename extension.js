@@ -9,49 +9,7 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
-// Try to import Extension class, fallback for older versions
-let Extension, gettext;
-try {
-    // GNOME Shell 45+
-    const extensionModule = await import('resource:///org/gnome/shell/extensions/extension.js');
-    Extension = extensionModule.Extension;
-    gettext = extensionModule.gettext;
-} catch (e) {
-    // Fallback for older versions
-    Extension = class Extension {
-        constructor(metadata) {
-            this.metadata = metadata;
-        }
-        
-        getSettings() {
-            const schemaId = 'org.gnome.shell.extensions.topnetgraph';
-            const schemaDir = this.metadata.dir.get_child('schemas');
-            
-            let schemaSource;
-            if (schemaDir.query_exists(null)) {
-                schemaSource = Gio.SettingsSchemaSource.new_from_directory(
-                    schemaDir.get_path(),
-                    Gio.SettingsSchemaSource.get_default(),
-                    false
-                );
-            } else {
-                schemaSource = Gio.SettingsSchemaSource.get_default();
-            }
-            
-            const schema = schemaSource.lookup(schemaId, true);
-            if (!schema) {
-                throw new Error(`Schema ${schemaId} could not be found`);
-            }
-            
-            return new Gio.Settings({ settings_schema: schema });
-        }
-    };
-    
-    // Simple gettext fallback
-    gettext = (str) => str;
-}
-
-const _ = gettext;
+import {Extension, gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
 
 // Network data management class
 class NetworkData {
@@ -445,12 +403,6 @@ class NetworkGraphButton extends PanelMenu.Button {
 
 // Extension main class
 export default class TopNetGraphExtension extends Extension {
-    constructor(metadata) {
-        super(metadata);
-        this._indicator = null;
-        this._settings = null;
-    }
-
     enable() {
         console.log('TopNetGraph: Enabling extension');
         
