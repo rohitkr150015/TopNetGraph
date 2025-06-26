@@ -78,122 +78,54 @@ class NetworkGraph extends St.DrawingArea {
 
     _connectSettingsSignals() {
         if (this._settings && !this._settingsChangedId) {
-            try {
-                this._settingsChangedId = this._settings.connect('changed', () => {
-                    this.queue_repaint();
-                });
-            } catch (e) {
-                console.warn('TopNetGraph: Could not connect to settings signals:', e.message);
-            }
+            this._settingsChangedId = this._settings.connect('changed', () => {
+                this.queue_repaint();
+            });
         }
     }
 
     _onRepaint(area) {
-        try {
-            const cr = area.get_context();
-            const [width, height] = area.get_surface_size();
-            
-            if (!cr || width <= 0 || height <= 0) return;
+        const cr = area.get_context();
+        const [width, height] = area.get_surface_size();
+        
+        if (!cr || width <= 0 || height <= 0) return;
 
-            // Clear background
-            cr.setOperator(Cairo.Operator.CLEAR);
-            cr.paint();
-            cr.setOperator(Cairo.Operator.OVER);
+        // Clear background
+        cr.setOperator(Cairo.Operator.CLEAR);
+        cr.paint();
+        cr.setOperator(Cairo.Operator.OVER);
 
-            // Background
-            const bgAlpha = this._hoverEffect ? 0.15 : 0.08;
-            cr.setSourceRGBA(1, 1, 1, bgAlpha);
-            cr.rectangle(0, 0, width, height);
+        // Background
+        const bgAlpha = this._hoverEffect ? 0.15 : 0.08;
+        cr.setSourceRGBA(1, 1, 1, bgAlpha);
+        cr.rectangle(0, 0, width, height);
+        cr.fill();
+
+        const history = this._networkData.history;
+        if (history.length < 2) {
+            // Show "no data" indicator
+            cr.setSourceRGBA(0.5, 0.5, 0.5, 0.5);
+            cr.arc(width / 2, height / 2, 2, 0, 2 * Math.PI);
             cr.fill();
-
-            const history = this._networkData.history;
-            if (history.length < 2) {
-                // Show "no data" indicator
-                cr.setSourceRGBA(0.5, 0.5, 0.5, 0.5);
-                cr.arc(width / 2, height / 2, 2, 0, 2 * Math.PI);
-                cr.fill();
-                return;
-            }
-
-            this._drawGraph(cr, width, height, history);
-            this._drawCurrentIndicator(cr, width, height);
-        } catch (e) {
-            console.error('TopNetGraph: Error in _onRepaint:', e.message);
+            return;
         }
+
+        this._drawGraph(cr, width, height, history);
+        this._drawCurrentIndicator(cr, width, height);
     }
 
     _drawGraph(cr, width, height, history) {
-        try {
-            const maxBandwidth = this._networkData.maxBandwidth;
-            const stepX = width / Math.max(1, history.length - 1);
-            const showUpload = this._getSetting('show-upload', true);
-            const showDownload = this._getSetting('show-download', true);
-            const graphType = this._getSetting('graph-type', 'filled');
-            
-            // Draw download area/line (blue)
-            if (showDownload) {
-                if (graphType === 'line') {
-                    cr.setSourceRGBA(0.2, 0.6, 1.0, 0.9);
-                    cr.setLineWidth(1.5);
-                    cr.moveTo(0, height - (Math.min(history[0].download / maxBandwidth, 1.0) * height * 0.85));
-                    
-                    for (let i = 1; i < history.length; i++) {
-                        const x = i * stepX;
-                        const downloadRatio = Math.min(history[i].download / maxBandwidth, 1.0);
-                        const y = height - (downloadRatio * height * 0.85);
-                        cr.lineTo(x, y);
-                    }
-                    cr.stroke();
-                } else {
-                    cr.setSourceRGBA(0.2, 0.6, 1.0, 0.6);
-                    cr.moveTo(0, height);
-                    
-                    for (let i = 0; i < history.length; i++) {
-                        const x = i * stepX;
-                        const downloadRatio = Math.min(history[i].download / maxBandwidth, 1.0);
-                        const y = height - (downloadRatio * height * 0.85);
-                        cr.lineTo(x, y);
-                    }
-                    cr.lineTo(width, height);
-                    cr.closePath();
-                    cr.fill();
-                }
-            }
-
-            // Draw upload area/line (orange, stacked on top for filled, separate for line)
-            if (showUpload) {
-                if (graphType === 'line') {
-                    cr.setSourceRGBA(1.0, 0.6, 0.2, 0.9);
-                    cr.setLineWidth(1.5);
-                    cr.moveTo(0, height - (Math.min(history[0].upload / maxBandwidth, 1.0) * height * 0.85));
-                    
-                    for (let i = 1; i < history.length; i++) {
-                        const x = i * stepX;
-                        const uploadRatio = Math.min(history[i].upload / maxBandwidth, 1.0);
-                        const y = height - (uploadRatio * height * 0.85);
-                        cr.lineTo(x, y);
-                    }
-                    cr.stroke();
-                } else {
-                    cr.setSourceRGBA(1.0, 0.6, 0.2, 0.6);
-                    cr.moveTo(0, height);
-                    
-                    for (let i = 0; i < history.length; i++) {
-                        const x = i * stepX;
-                        const totalRatio = Math.min((history[i].upload + history[i].download) / maxBandwidth, 1.0);
-                        const y = height - (totalRatio * height * 0.85);
-                        cr.lineTo(x, y);
-                    }
-                    cr.lineTo(width, height);
-                    cr.closePath();
-                    cr.fill();
-                }
-            }
-
-            // Draw outline for better visibility (filled areas only)
-            if (graphType === 'filled' && showDownload) {
-                cr.setSourceRGBA(1, 1, 1, 0.3);
-                cr.setLineWidth(0.5);
+        const maxBandwidth = this._networkData.maxBandwidth;
+        const stepX = width / Math.max(1, history.length - 1);
+        const showUpload = this._getSetting('show-upload', true);
+        const showDownload = this._getSetting('show-download', true);
+        const graphType = this._getSetting('graph-type', 'filled');
+        
+        // Draw download area/line (blue)
+        if (showDownload) {
+            if (graphType === 'line') {
+                cr.setSourceRGBA(0.2, 0.6, 1.0, 0.9);
+                cr.setLineWidth(1.5);
                 cr.moveTo(0, height - (Math.min(history[0].download / maxBandwidth, 1.0) * height * 0.85));
                 
                 for (let i = 1; i < history.length; i++) {
@@ -203,61 +135,104 @@ class NetworkGraph extends St.DrawingArea {
                     cr.lineTo(x, y);
                 }
                 cr.stroke();
+            } else {
+                cr.setSourceRGBA(0.2, 0.6, 1.0, 0.6);
+                cr.moveTo(0, height);
+                
+                for (let i = 0; i < history.length; i++) {
+                    const x = i * stepX;
+                    const downloadRatio = Math.min(history[i].download / maxBandwidth, 1.0);
+                    const y = height - (downloadRatio * height * 0.85);
+                    cr.lineTo(x, y);
+                }
+                cr.lineTo(width, height);
+                cr.closePath();
+                cr.fill();
             }
-        } catch (e) {
-            console.error('TopNetGraph: Error in _drawGraph:', e.message);
+        }
+
+        // Draw upload area/line (orange, stacked on top for filled, separate for line)
+        if (showUpload) {
+            if (graphType === 'line') {
+                cr.setSourceRGBA(1.0, 0.6, 0.2, 0.9);
+                cr.setLineWidth(1.5);
+                cr.moveTo(0, height - (Math.min(history[0].upload / maxBandwidth, 1.0) * height * 0.85));
+                
+                for (let i = 1; i < history.length; i++) {
+                    const x = i * stepX;
+                    const uploadRatio = Math.min(history[i].upload / maxBandwidth, 1.0);
+                    const y = height - (uploadRatio * height * 0.85);
+                    cr.lineTo(x, y);
+                }
+                cr.stroke();
+            } else {
+                cr.setSourceRGBA(1.0, 0.6, 0.2, 0.6);
+                cr.moveTo(0, height);
+                
+                for (let i = 0; i < history.length; i++) {
+                    const x = i * stepX;
+                    const totalRatio = Math.min((history[i].upload + history[i].download) / maxBandwidth, 1.0);
+                    const y = height - (totalRatio * height * 0.85);
+                    cr.lineTo(x, y);
+                }
+                cr.lineTo(width, height);
+                cr.closePath();
+                cr.fill();
+            }
+        }
+
+        // Draw outline for better visibility (filled areas only)
+        if (graphType === 'filled' && showDownload) {
+            cr.setSourceRGBA(1, 1, 1, 0.3);
+            cr.setLineWidth(0.5);
+            cr.moveTo(0, height - (Math.min(history[0].download / maxBandwidth, 1.0) * height * 0.85));
+            
+            for (let i = 1; i < history.length; i++) {
+                const x = i * stepX;
+                const downloadRatio = Math.min(history[i].download / maxBandwidth, 1.0);
+                const y = height - (downloadRatio * height * 0.85);
+                cr.lineTo(x, y);
+            }
+            cr.stroke();
         }
     }
 
     _drawCurrentIndicator(cr, width, height) {
-        try {
-            const latest = this._networkData.getLatest();
-            const loadRatio = latest.total / this._networkData.maxBandwidth;
-            
-            // Status indicator dot
-            let r, g, b;
-            if (loadRatio > 0.7) {
-                [r, g, b] = [1.0, 0.2, 0.2]; // Red - high load
-            } else if (loadRatio > 0.3) {
-                [r, g, b] = [1.0, 0.8, 0.0]; // Yellow - medium load  
-            } else {
-                [r, g, b] = [0.2, 1.0, 0.2]; // Green - low load
-            }
-
-            cr.setSourceRGBA(r, g, b, 0.9);
-            cr.arc(width - 3, 3, 1.5, 0, 2 * Math.PI);
-            cr.fill();
-        } catch (e) {
-            console.error('TopNetGraph: Error in _drawCurrentIndicator:', e.message);
+        const latest = this._networkData.getLatest();
+        const loadRatio = latest.total / this._networkData.maxBandwidth;
+        
+        // Status indicator dot
+        let r, g, b;
+        if (loadRatio > 0.7) {
+            [r, g, b] = [1.0, 0.2, 0.2]; // Red - high load
+        } else if (loadRatio > 0.3) {
+            [r, g, b] = [1.0, 0.8, 0.0]; // Yellow - medium load  
+        } else {
+            [r, g, b] = [0.2, 1.0, 0.2]; // Green - low load
         }
+
+        cr.setSourceRGBA(r, g, b, 0.9);
+        cr.arc(width - 3, 3, 1.5, 0, 2 * Math.PI);
+        cr.fill();
     }
 
     _getSetting(key, defaultValue) {
-        try {
-            if (!this._settings) return defaultValue;
-            
-            switch (key) {
-                case 'show-upload':
-                case 'show-download':
-                    return this._settings.get_boolean(key);
-                case 'graph-type':
-                    return this._settings.get_string(key);
-                default:
-                    return defaultValue;
-            }
-        } catch (e) {
-            console.warn(`TopNetGraph: Could not get setting ${key}:`, e.message);
-            return defaultValue;
+        if (!this._settings) return defaultValue;
+        
+        switch (key) {
+            case 'show-upload':
+            case 'show-download':
+                return this._settings.get_boolean(key);
+            case 'graph-type':
+                return this._settings.get_string(key);
+            default:
+                return defaultValue;
         }
     }
 
     destroy() {
         if (this._settingsChangedId && this._settings) {
-            try {
-                this._settings.disconnect(this._settingsChangedId);
-            } catch (e) {
-                console.warn('TopNetGraph: Error disconnecting settings signal:', e.message);
-            }
+            this._settings.disconnect(this._settingsChangedId);
             this._settingsChangedId = null;
         }
         super.destroy();
@@ -275,6 +250,7 @@ class NetworkGraphButton extends PanelMenu.Button {
         this._updateId = null;
         this._settingsChangedId = null;
         this._interfaceChangedId = null;
+        this._netDevFile = null;
         
         // Create the graph widget
         this._graph = new NetworkGraph(this._networkData, this._settings);
@@ -283,8 +259,9 @@ class NetworkGraphButton extends PanelMenu.Button {
         // Create popup menu
         this._createMenu();
         
-        // Initialize interface setting
+        // Initialize interface setting and file handle
         this._initializeSettings();
+        this._initializeFileHandle();
         
         // Start monitoring
         this._startMonitoring();
@@ -294,30 +271,25 @@ class NetworkGraphButton extends PanelMenu.Button {
     }
 
     _initializeSettings() {
-        try {
-            if (this._settings) {
-                this._networkData.currentInterface = this._settings.get_string('network-interface');
-            }
-        } catch (e) {
-            console.warn('TopNetGraph: Could not initialize settings:', e.message);
-            this._networkData.currentInterface = 'auto';
+        if (this._settings) {
+            this._networkData.currentInterface = this._settings.get_string('network-interface');
         }
+    }
+
+    _initializeFileHandle() {
+        this._netDevFile = Gio.File.new_for_path('/proc/net/dev');
     }
 
     _connectSettingsSignals() {
         if (!this._settings) return;
 
-        try {
-            this._settingsChangedId = this._settings.connect('changed::update-interval', () => {
-                this._restartMonitoring();
-            });
+        this._settingsChangedId = this._settings.connect('changed::update-interval', () => {
+            this._restartMonitoring();
+        });
 
-            this._interfaceChangedId = this._settings.connect('changed::network-interface', () => {
-                this._networkData.currentInterface = this._settings.get_string('network-interface');
-            });
-        } catch (e) {
-            console.warn('TopNetGraph: Could not connect to settings signals:', e.message);
-        }
+        this._interfaceChangedId = this._settings.connect('changed::network-interface', () => {
+            this._networkData.currentInterface = this._settings.get_string('network-interface');
+        });
     }
 
     _createMenu() {
@@ -355,114 +327,103 @@ class NetworkGraphButton extends PanelMenu.Button {
         this._startMonitoring();
     }
 
-    _updateNetworkStats() {
-        try {
-            const [success, contents] = GLib.file_get_contents('/proc/net/dev');
+    async _updateNetworkStats() {
+        if (!this._netDevFile) return;
+
+        const [contents] = await this._netDevFile.load_contents_async(null);
+        
+        if (contents) {
+            const data = new TextDecoder().decode(contents);
+            const stats = this._parseNetworkData(data);
             
-            if (success) {
-                const data = new TextDecoder().decode(contents);
-                const stats = this._parseNetworkData(data);
-                
-                if (stats) {
-                    this._networkData.addDataPoint(stats.upload, stats.download);
-                    this._updateMenuStats(stats);
-                    if (this._graph) {
-                        this._graph.queue_repaint();
-                    }
+            if (stats) {
+                this._networkData.addDataPoint(stats.upload, stats.download);
+                this._updateMenuStats(stats);
+                if (this._graph) {
+                    this._graph.queue_repaint();
                 }
             }
-        } catch (e) {
-            console.error('TopNetGraph: Failed to read network stats:', e.message);
         }
     }
 
     _parseNetworkData(data) {
-        try {
-            const lines = data.split('\n');
-            let totalUpload = 0, totalDownload = 0;
-            let activeInterfaces = [];
-            const now = GLib.get_monotonic_time() / 1000; // Convert to milliseconds
-            const targetInterface = this._networkData.currentInterface;
+        const lines = data.split('\n');
+        let totalUpload = 0, totalDownload = 0;
+        let activeInterfaces = [];
+        const now = GLib.get_monotonic_time() / 1000; // Convert to milliseconds
+        const targetInterface = this._networkData.currentInterface;
+        
+        for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed || trimmed.includes('Inter-|') || trimmed.includes('face |')) continue;
             
-            for (const line of lines) {
-                const trimmed = line.trim();
-                if (!trimmed || trimmed.includes('Inter-|') || trimmed.includes('face |')) continue;
+            const parts = trimmed.split(/\s+/);
+            if (parts.length < 17) continue;
+            
+            const interfaceName = parts[0].replace(':', '');
+            
+            // Skip loopback
+            if (interfaceName === 'lo') continue;
+            
+            // Filter by specific interface if not 'auto'
+            if (targetInterface !== 'auto' && interfaceName !== targetInterface) continue;
+            
+            const rxBytes = parseInt(parts[1]) || 0;
+            const txBytes = parseInt(parts[9]) || 0;
+            
+            // Skip interfaces with no traffic (unless specifically selected)
+            if (targetInterface === 'auto' && rxBytes === 0 && txBytes === 0) continue;
+            
+            const lastData = this._networkData.lastStats.get(interfaceName);
+            
+            if (lastData && now > lastData.timestamp) {
+                const timeDelta = (now - lastData.timestamp) / 1000; // Convert to seconds
                 
-                const parts = trimmed.split(/\s+/);
-                if (parts.length < 17) continue;
-                
-                const interfaceName = parts[0].replace(':', '');
-                
-                // Skip loopback
-                if (interfaceName === 'lo') continue;
-                
-                // Filter by specific interface if not 'auto'
-                if (targetInterface !== 'auto' && interfaceName !== targetInterface) continue;
-                
-                const rxBytes = parseInt(parts[1]) || 0;
-                const txBytes = parseInt(parts[9]) || 0;
-                
-                // Skip interfaces with no traffic (unless specifically selected)
-                if (targetInterface === 'auto' && rxBytes === 0 && txBytes === 0) continue;
-                
-                const lastData = this._networkData.lastStats.get(interfaceName);
-                
-                if (lastData && now > lastData.timestamp) {
-                    const timeDelta = (now - lastData.timestamp) / 1000; // Convert to seconds
+                if (timeDelta > 0 && timeDelta < 2) { // Reasonable time delta
+                    const rxRate = Math.max(0, (rxBytes - lastData.rxBytes) / timeDelta);
+                    const txRate = Math.max(0, (txBytes - lastData.txBytes) / timeDelta);
                     
-                    if (timeDelta > 0 && timeDelta < 2) { // Reasonable time delta
-                        const rxRate = Math.max(0, (rxBytes - lastData.rxBytes) / timeDelta);
-                        const txRate = Math.max(0, (txBytes - lastData.txBytes) / timeDelta);
-                        
-                        totalDownload += rxRate;
-                        totalUpload += txRate;
-                        activeInterfaces.push(interfaceName);
-                    }
+                    totalDownload += rxRate;
+                    totalUpload += txRate;
+                    activeInterfaces.push(interfaceName);
                 }
-                
-                this._networkData.lastStats.set(interfaceName, {
-                    rxBytes,
-                    txBytes,
-                    timestamp: now
-                });
             }
             
-            // Update interface display
-            const interfaceText = activeInterfaces.length > 0 ? 
-                `${_('Interface')}: ${activeInterfaces.join(', ')}` : 
-                _('Interface: No active connections');
-            
-            if (this._interfaceItem) {
-                this._interfaceItem.label.text = interfaceText;
-            }
-            
-            return activeInterfaces.length > 0 ? { upload: totalUpload, download: totalDownload } : null;
-        } catch (e) {
-            console.error('TopNetGraph: Error parsing network data:', e.message);
-            return null;
+            this._networkData.lastStats.set(interfaceName, {
+                rxBytes,
+                txBytes,
+                timestamp: now
+            });
         }
+        
+        // Update interface display
+        const interfaceText = activeInterfaces.length > 0 ? 
+            `${_('Interface')}: ${activeInterfaces.join(', ')}` : 
+            _('Interface: No active connections');
+        
+        if (this._interfaceItem) {
+            this._interfaceItem.label.text = interfaceText;
+        }
+        
+        return activeInterfaces.length > 0 ? { upload: totalUpload, download: totalDownload } : null;
     }
 
     _updateMenuStats(stats) {
-        try {
-            const formatBytes = (bytes) => {
-                if (bytes >= 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB/s`;
-                if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB/s`;
-                if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KB/s`;
-                return `${Math.round(bytes)} B/s`;
-            };
+        const formatBytes = (bytes) => {
+            if (bytes >= 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB/s`;
+            if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB/s`;
+            if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KB/s`;
+            return `${Math.round(bytes)} B/s`;
+        };
 
-            if (this._uploadItem) {
-                this._uploadItem.label.text = `${_('Upload')}: ${formatBytes(stats.upload)}`;
-            }
-            if (this._downloadItem) {
-                this._downloadItem.label.text = `${_('Download')}: ${formatBytes(stats.download)}`;
-            }
-            if (this._totalItem) {
-                this._totalItem.label.text = `${_('Total')}: ${formatBytes(stats.upload + stats.download)}`;
-            }
-        } catch (e) {
-            console.error('TopNetGraph: Error updating menu stats:', e.message);
+        if (this._uploadItem) {
+            this._uploadItem.label.text = `${_('Upload')}: ${formatBytes(stats.upload)}`;
+        }
+        if (this._downloadItem) {
+            this._downloadItem.label.text = `${_('Download')}: ${formatBytes(stats.download)}`;
+        }
+        if (this._totalItem) {
+            this._totalItem.label.text = `${_('Total')}: ${formatBytes(stats.upload + stats.download)}`;
         }
     }
 
@@ -473,20 +434,12 @@ class NetworkGraphButton extends PanelMenu.Button {
         }
 
         if (this._settingsChangedId && this._settings) {
-            try {
-                this._settings.disconnect(this._settingsChangedId);
-            } catch (e) {
-                console.warn('TopNetGraph: Error disconnecting settings signal:', e.message);
-            }
+            this._settings.disconnect(this._settingsChangedId);
             this._settingsChangedId = null;
         }
 
         if (this._interfaceChangedId && this._settings) {
-            try {
-                this._settings.disconnect(this._interfaceChangedId);
-            } catch (e) {
-                console.warn('TopNetGraph: Error disconnecting interface signal:', e.message);
-            }
+            this._settings.disconnect(this._interfaceChangedId);
             this._interfaceChangedId = null;
         }
         
@@ -499,30 +452,16 @@ export default class TopNetGraphExtension extends Extension {
     enable() {
         console.log('TopNetGraph: Enabling extension');
         
-        try {
-            this._settings = this.getSettings();
-        } catch (e) {
-            console.log('TopNetGraph: Could not load settings, using defaults:', e.message);
-            this._settings = null;
-        }
-        
-        try {
-            this._indicator = new NetworkGraphButton(this._settings);
-            Main.panel.addToStatusArea('topnetgraph', this._indicator);
-        } catch (e) {
-            console.error('TopNetGraph: Failed to create indicator:', e.message);
-        }
+        this._settings = this.getSettings();
+        this._indicator = new NetworkGraphButton(this._settings);
+        Main.panel.addToStatusArea('topnetgraph', this._indicator);
     }
 
     disable() {
         console.log('TopNetGraph: Disabling extension');
         
         if (this._indicator) {
-            try {
-                this._indicator.destroy();
-            } catch (e) {
-                console.error('TopNetGraph: Error destroying indicator:', e.message);
-            }
+            this._indicator.destroy();
             this._indicator = null;
         }
 
